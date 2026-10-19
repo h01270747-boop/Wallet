@@ -132,6 +132,7 @@
       <div class="faceid-title" id="faceIdTitle">قفل کیف پول</div>
       <div class="faceid-desc" id="faceIdDesc">برای مشاهده کیف پول، با Face ID ادامه بده.</div>
       <button class="faceid-btn" id="faceIdButton" type="button" onclick="handleFaceId()">باز کردن با Face ID</button>
+      <button class="faceid-btn" id="faceIdDemoButton" type="button" style="display:none;margin-top:10px;background:#2c2c2e" onclick="continueDemo()">ادامه بدون Face ID (حالت نمایشی)</button>
       <button class="faceid-reset" type="button" onclick="resetFaceId()">تنظیم مجدد Face ID</button>
       <div class="faceid-status" id="faceIdStatus" role="status"></div>
     </div>
@@ -549,6 +550,18 @@ function flipCard(){document.getElementById('cardFlipper').classList.toggle('fli
       return btoa(String.fromCharCode(...new Uint8Array(buffer)))
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
     }
+    function offerDemoFallback(message) {
+      setFaceIdStatus(message);
+      const fallback = document.getElementById('faceIdDemoButton');
+      if (fallback) fallback.style.display = 'block';
+      const button = document.getElementById('faceIdButton');
+      if (button) { button.disabled = false; button.textContent = 'تلاش دوباره با Face ID'; }
+    }
+    function continueDemo() {
+      finishFaceIdUnlock();
+      const fallback = document.getElementById('faceIdDemoButton');
+      if (fallback) fallback.style.display = 'none';
+    }
     function setFaceIdStatus(message) {
       const el = document.getElementById('faceIdStatus');
       if (el) el.textContent = message;
@@ -565,9 +578,7 @@ function flipCard(){document.getElementById('cardFlipper').classList.toggle('fli
       button.textContent = 'در حال بررسی…';
       try {
         if (!window.isSecureContext || !navigator.credentials || !window.PublicKeyCredential) {
-          setFaceIdStatus('این مرورگر امکان Face ID وب را ندارد؛ حالت نمایشی باز می‌شود.');
-          await new Promise(resolve => setTimeout(resolve, 900));
-          finishFaceIdUnlock();
+          offerDemoFallback('Face ID در این مرورگر در دسترس نیست. می‌توانی فقط برای نمایش، بدون Face ID ادامه بدهی.');
           return;
         }
         let credentialId = localStorage.getItem(FACE_ID_KEY);
@@ -602,11 +613,7 @@ function flipCard(){document.getElementById('cardFlipper').classList.toggle('fli
         }});
         finishFaceIdUnlock();
       } catch (error) {
-        setFaceIdStatus(error && error.name === 'NotAllowedError' ? 'تأیید لغو شد یا زمان آن تمام شد. دوباره تلاش کن.' : 'Face ID در این مرورگر در دسترس نیست. برای این نمونه، قفل نمایشی باز می‌شود.');
-        if (error && error.name !== 'NotAllowedError') {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          finishFaceIdUnlock();
-        }
+        offerDemoFallback(error && error.name === 'NotAllowedError' ? 'Face ID در این صفحه قابل استفاده نیست یا درخواست لغو شده. می‌توانی دوباره تلاش کنی یا در حالت نمایشی ادامه بدهی.' : 'Face ID در این مرورگر در دسترس نیست. می‌توانی در حالت نمایشی ادامه بدهی.');
       } finally {
         button.disabled = false;
         if (!document.getElementById('faceIdLock').classList.contains('hidden')) {
@@ -616,6 +623,8 @@ function flipCard(){document.getElementById('cardFlipper').classList.toggle('fli
     }
     function resetFaceId() {
       localStorage.removeItem(FACE_ID_KEY);
+      const fallback = document.getElementById('faceIdDemoButton');
+      if (fallback) fallback.style.display = 'none';
       document.getElementById('faceIdDesc').textContent = 'برای مشاهده کیف پول، با Face ID ادامه بده.';
       document.getElementById('faceIdButton').textContent = 'باز کردن با Face ID';
       setFaceIdStatus('تنظیم Face ID پاک شد. دفعه بعد دوباره تنظیم می‌شود.');
